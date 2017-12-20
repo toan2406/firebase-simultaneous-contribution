@@ -60,8 +60,8 @@ export class FirebaseSC {
       .once('value')
       .then(() => (isDataLoaded = true));
 
-    tasksRef.
-      on('child_added', snapshot => {
+    tasksRef
+      .on('child_added', snapshot => {
         const task = snapshot.val();
         const { session, ...values } = task;
         if (isDataLoaded && session !== this._sessionId) callback(values);

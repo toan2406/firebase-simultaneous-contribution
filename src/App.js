@@ -52,7 +52,7 @@ class App extends Component {
 
   syncDataToFirebase = debounce(({ ref, value }) => {
     firebaseSC.set({ ref, value });
-  }, 0);
+  }, 200);
 
   render() {
     return (
