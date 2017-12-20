@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 
+// Set limit length for tasks queue
 const LIMIT = 10;
 
 exports.autoCleanTasks = functions.database

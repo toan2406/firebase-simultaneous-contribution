@@ -1,6 +1,7 @@
 /* Firebase Simultaneous Contribution */
 
 import firebase from 'firebase';
+import debounce from 'lodash.debounce';
 import Queue from './queue';
 
 export class FirebaseSC {
@@ -8,27 +9,37 @@ export class FirebaseSC {
   _sessionId = null;
   _queue = null;
 
+  _setToFirebase = (task, callback) => {
+    this._firebaseInstance
+      .database()
+      .ref('/__data__' + task.ref)
+      .set(task.value)
+      .then(() =>
+        this._firebaseInstance
+          .database()
+          .ref('/__tasks__')
+          .push(task, callback)
+      );
+  };
+
   constructor(firebaseInstance) {
     this._firebaseInstance = firebaseInstance;
   }
 
-  init({ sessionId = Date.now(), ...firebaseConfig }) {
+  init({
+    sessionId = Date.now(),
+    debounceTime = 500,
+    enableQueue = false,
+    ...firebaseConfig
+  }) {
     this._sessionId = sessionId;
-    this._queue = new Queue();
+    this.set = debounce(this.set, debounceTime);
     this._firebaseInstance.initializeApp(firebaseConfig);
 
-    this._queue.setConsumer((task, callback) => {
-      this._firebaseInstance
-        .database()
-        .ref('/__data__' + task.ref)
-        .set(task.value)
-        .then(() =>
-          this._firebaseInstance
-            .database()
-            .ref('/__tasks__')
-            .push(task, callback)
-        );
-    });
+    if (enableQueue) {
+      this._queue = new Queue();
+      this._queue.setConsumer(this._setToFirebase);
+    }
   }
 
   set(task) {
@@ -38,18 +49,11 @@ export class FirebaseSC {
       value: task.value
     };
 
-    // this._queue.push(taskWithSession);
-
-    this._firebaseInstance
-      .database()
-      .ref('/__data__' + task.ref)
-      .set(task.value)
-      .then(() =>
-        this._firebaseInstance
-          .database()
-          .ref('/__tasks__')
-          .push(taskWithSession)
-      );
+    if (this._queue) {
+      this._queue.push(taskWithSession);
+    } else {
+      this._setToFirebase(taskWithSession);
+    }
   }
 
   onDataChange(callback) {
